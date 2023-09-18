@@ -1,0 +1,2 @@
+# By default install with linking using setup.py
+-e .
