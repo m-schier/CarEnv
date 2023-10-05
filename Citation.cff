@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you find this software useful in your research, please cite it as below."
+authors:
+- family-names: "Schier"
+  given-names: "Maximilian"
+  orcid: "https://orcid.org/0009-0007-4314-728X"
+- family-names: "Reinders"
+  given-names: "Christoph"
+- family-names: "Rosenhahn"
+  given-names: "Bodo"
+  orcid: "https://orcid.org/0000-0003-3861-1424"
+title: "CarEnv"
+version: 1.0
+date-released: 2023-09-18
+url: "https://github.com/m-schier/CarEnv"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Schier"
+    given-names: "Maximilian"
+    orcid: "https://orcid.org/0009-0007-4314-728X"
+  - family-names: "Reinders"
+    given-names: "Christoph"
+  - family-names: "Rosenhahn"
+    given-names: "Bodo"
+    orcid: "https://orcid.org/0000-0003-3861-1424"
+  booktitle: "2023 IEEE 26th International Conference on Intelligent Transportation Systems (ITSC)"
+  month: 9
+  title: "Learned Fourier Bases for Deep Set Feature Extractors in Automotive Reinforcement Learning"
+  year: 2023
