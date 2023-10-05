@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 
 from .Action import Action
 from ..Physics.VelocityController import DirectVelocityController, LinearVelocityController

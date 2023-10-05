@@ -1,5 +1,5 @@
 from typing import Tuple, Any
-import gym
+import gymnasium as gym
 
 
 class Action:

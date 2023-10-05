@@ -33,7 +33,10 @@ see the implementation in `CarEnv/Actions/` for available keyword arguments.
 ## Training a Soft Actor-Critic agent
 In `scripts/train_sac.py` you may find an example script on how to train a Soft Actor-Critic
 using a Deep Set feature extractor on the `parking` and `racing` configurations. This
-implementation uses the Stable Baselines 3 library.
+implementation uses the Stable Baselines 3 library. You must install the reinforcement learning extra requirements, i.e.:
+```shell
+pip install -e .[RL]
+```
 
 ## Citing
 If you find this environment useful, you may cite it by our paper in which it was initially presented:

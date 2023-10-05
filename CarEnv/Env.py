@@ -2,7 +2,7 @@ from typing import Optional, Tuple, Any, Dict
 from enum import IntEnum
 from copy import deepcopy
 
-import gym
+import gymnasium as gym
 
 import numpy as np
 
@@ -197,7 +197,7 @@ class CarEnv(gym.Env):
     def set_reward(self, val):
         self._pending_reward = val
 
-    def step(self, action) -> Tuple[Any, float, bool, dict]:
+    def step(self, action) -> Tuple[Any, float, bool, bool, dict]:
         assert not self._reset_required
 
         self._pending_reward = .0
@@ -232,7 +232,7 @@ class CarEnv(gym.Env):
         self._reset_required = terminated or truncated
         self._pending_info['TimeLimit.truncated'] = truncated
 
-        return obs, self._pending_reward, truncated or terminated, self._pending_info
+        return obs, self._pending_reward, terminated, truncated, self._pending_info
 
     @property
     def action(self):
@@ -305,7 +305,7 @@ class CarEnv(gym.Env):
 
         return self.sensors
 
-    def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Any:
+    def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Tuple[Any, dict]:
         # Clean up on reset
         if self.__renderer is not None:
             self.__renderer.close()
@@ -344,4 +344,4 @@ class CarEnv(gym.Env):
 
         self.steering_history = np.zeros(self.steering_history_length)
 
-        return self._make_obs()
+        return self._make_obs(), {}

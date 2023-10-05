@@ -1,6 +1,6 @@
 from typing import Tuple, Any
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from .Action import Action

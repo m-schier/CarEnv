@@ -1,6 +1,6 @@
 from typing import Tuple
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from .Problem import Problem

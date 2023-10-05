@@ -3,7 +3,7 @@ from typing import Optional, Dict
 
 from stable_baselines3.sac import SAC
 from stable_baselines3.dqn.policies import BaseFeaturesExtractor
-import gym
+import gymnasium as gym
 import torch
 
 
