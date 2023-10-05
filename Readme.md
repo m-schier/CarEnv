@@ -20,7 +20,19 @@ are continuous actoins.
 
 ## Installation
 
-Run from the command prompt using the python environment for development from this folder:
+To install the latest version, simply run:
+```shell
+pip install git+https://github.com/m-schier/CarEnv
+```
+
+You may then create a new gym environment, e.g. on the `racing` configuration:
+```python
+from CarEnv import CarEnv, Configs
+
+env = CarEnv(Configs.get_standard_env_config("racing"))
+```
+
+However, if you want to modify the environment or run any of our example scripts it may be more convenient to clone this repository and then install using local linking:
 ```shell
 pip install -e .
 ```
