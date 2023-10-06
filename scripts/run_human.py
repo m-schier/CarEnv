@@ -25,7 +25,8 @@ def main():
         while not done:
             curr_time = time()
             act = env.action_space.sample()
-            obs, rew, done, *_ = env.step(act)
+            obs, rew, terminated, truncated, *_ = env.step(act)
+            done = terminated or truncated
             total_reward += rew
             env.render()
 
