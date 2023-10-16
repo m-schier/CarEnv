@@ -1,10 +1,13 @@
 import os
+import sys
 from typing import Optional, Dict
 
 from stable_baselines3.sac import SAC
 from stable_baselines3.dqn.policies import BaseFeaturesExtractor
+from stable_baselines3.common.callbacks import BaseCallback
 import gymnasium as gym
 import torch
+import numpy as np
 
 
 def aggregate_sum(x, indices, n_bins):
@@ -42,6 +45,8 @@ class PassthroughModel(torch.nn.Module):
 
 
 def make_static_encoder(space, static_dims):
+    from torch.nn import Sequential, ReLU, Linear
+
     if len(space.shape) != 1:
         raise ValueError(f"Unsupported static space: {space}")
 
@@ -49,7 +54,7 @@ def make_static_encoder(space, static_dims):
         # Dummy
         return PassthroughModel(), space.shape[0]
     else:
-        return torch.nn.Sequential(torch.nn.Linear(space.shape[0], static_dims), torch.nn.ReLU()), static_dims
+        return Sequential(Linear(space.shape[0], static_dims), ReLU()), static_dims
 
 
 class SetFeatureExtractor(BaseFeaturesExtractor):
@@ -59,6 +64,9 @@ class SetFeatureExtractor(BaseFeaturesExtractor):
 
         if item_arch is None:
             item_arch = dict()
+        else:
+            # Shallow copy because modified later
+            item_arch = {k: v for k, v in item_arch.items()}
 
         if set_dims is None:
             set_dims = dict()
@@ -72,7 +80,7 @@ class SetFeatureExtractor(BaseFeaturesExtractor):
             if "_set" in key:
                 max_obs, obs_features = space.shape
 
-                arch = item_arch.get(key, [64, 128])
+                arch = item_arch.pop(key, [64, 128])
                 set_dim = set_dims.get(key, arch[-1])
 
                 item_encoder_mlp = make_item_encoder_network(obs_features - 1, arch)
@@ -90,6 +98,10 @@ class SetFeatureExtractor(BaseFeaturesExtractor):
             else:
                 item_encoders[key], dims = make_static_encoder(space, static_dims)
                 total_features += dims
+
+        # Fail if not empty because it usually is an error (e.g. typo)
+        if item_arch:
+            raise ValueError(f"Unused item architectures: {list(item_arch.keys())}")
 
         self._features_dim = total_features
         self.item_encoders = torch.nn.ModuleDict(item_encoders)
@@ -125,39 +137,97 @@ class SetFeatureExtractor(BaseFeaturesExtractor):
         return torch.cat(result, dim=-1)
 
 
+class EvalCallback(BaseCallback):
+    def __init__(self, env, freq=50_000, tries=10):
+        super(EvalCallback, self).__init__()
+        self.freq = freq
+        self.tries = tries
+        self.env = env
+
+    def _on_step(self) -> bool:
+        import wandb
+
+        if self.num_timesteps % self.freq != 0:
+            return True
+
+        self.env.seed(0)
+        episode_rewards = []
+        episode_steps = []
+        bitmaps = []
+
+        for i in range(self.tries):
+            obs, _ = self.env.reset()
+            if i == 0:
+                bitmaps.append(self.env.render())
+            done = False
+            acc_rew = 0.
+            step = 0
+            while not done:
+                act, _ = self.model.predict(obs, deterministic=True)
+                obs, rew, terminated, truncated, info = self.env.step(act)
+                done = terminated or truncated
+                if i == 0:
+                    bitmaps.append(self.env.render())
+                acc_rew += rew
+                step += 1
+            episode_rewards.append(acc_rew)
+            episode_steps.append(step)
+
+        bitmaps = np.transpose(np.stack(bitmaps), (0, 3, 1, 2))
+        fps = int(np.ceil(1 / self.env.dt))
+        wandb.log({"eval/video": wandb.Video(bitmaps, fps=fps)}, step=self.num_timesteps)
+        self.logger.record("eval/ep_rew_mean", np.mean(episode_rewards))
+        self.logger.record("eval/ep_len_mean", np.mean(episode_steps))
+
+        return True
+
+
 def main():
     from argparse import ArgumentParser
     import wandb
     from stable_baselines3.common.callbacks import ProgressBarCallback
     from stable_baselines3.common.logger import configure
+    from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
     from CarEnv.Configs import get_standard_env_config, get_standard_env_names
     from CarEnv.Env import CarEnv
 
     parser = ArgumentParser()
     parser.add_argument('--gamma', type=float, default=.97)
+    parser.add_argument('--static_dims', default=0, type=int)
     parser.add_argument('--timesteps', type=int, default=1_000_000)
-    parser.add_argument('--env', choices=get_standard_env_names(), default=get_standard_env_names()[0])
+    parser.add_argument('--buffer_size', type=int, default=200_000)
+    parser.add_argument('--env', choices=get_standard_env_names(), default='racing')
     args = parser.parse_args()
 
-    env = CarEnv(get_standard_env_config(args.env))
+    env_config = get_standard_env_config(args.env)
+    env = CarEnv(env_config)
+    eval_env = CarEnv(env_config, render_mode='rgb_array')
 
     os.makedirs('./tmp', exist_ok=True)
     wandb.init(project="CarEnv", resume='never', config=args, sync_tensorboard=True, dir='./tmp')
 
     policy_kwargs = {
         'features_extractor_class': SetFeatureExtractor,
-        'net_arch': [256, 256, 256],
+        'net_arch': [256, 256],
         'features_extractor_kwargs': {
             'item_arch': {
-                "track_set": [64, 32, 128],
-            }
+                "cones_set": [64, 32, 128],
+            },
+            'static_dims': args.static_dims,
         }
     }
 
-    agent = SAC("MultiInputPolicy", env, buffer_size=200_000, gamma=args.gamma, policy_kwargs=policy_kwargs)
+    print(f"{args = }", file=sys.stderr)
+    print(f"{policy_kwargs = }", file=sys.stderr)
+    print(f"{torch.cuda.is_available() = }", file=sys.stderr)
+
+    act_shape = env.action_space.shape
+    noise = OrnsteinUhlenbeckActionNoise(np.zeros(act_shape), np.ones(act_shape) * .2, dt=1e-1) if args.env == 'racing' else None
+    agent = SAC("MultiInputPolicy", env, buffer_size=args.buffer_size, action_noise=noise, gamma=args.gamma,
+                policy_kwargs=policy_kwargs)
 
     agent.set_logger(configure(wandb.run.dir, ["tensorboard"]))
-    agent.learn(args.timesteps, callback=[ProgressBarCallback()])
+    agent.learn(args.timesteps, callback=[ProgressBarCallback(), EvalCallback(eval_env)])
 
 
 if __name__ == '__main__':

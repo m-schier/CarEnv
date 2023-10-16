@@ -6,65 +6,102 @@ from .TrackRenderer import TrackRenderer
 
 
 class BirdViewRenderer:
-    def __init__(self, width, height, scale=15., orient_forward=False, draw_physics=False):
+    def __init__(self, width, height, scale=15., orient_forward=False, draw_physics=False, draw_sensors=False, hud=True,
+                 forward_center=.8, draw_grid=True):
         self._bvr = BitmapRenderer(width, height)
         self._bvr.open()
         self.width = width
         self.height = height
         self.scale = scale
         self.orient_forward = orient_forward
+        self.forward_center = forward_center
         self.last_transform = None
         self.slip_lines = []
         self.draw_physics = draw_physics
+        self.draw_sensors = draw_sensors
+        self.draw_hud = hud
+        self.draw_grid = draw_grid
         self.start_lights = None
         self.ghosts = None
         self.show_track = True
         self.show_digital_tachometer = False
         self._cone_renderer = ConeRenderer()
         self._track_renderer = TrackRenderer()
+        self._bg_grid_path = None
 
-    def _render_ctx(self, env, ctx):
-        from ..Problems import FreeDriveProblem
-        from .Gauge import Gauge
-
-        pose = env.vehicle_model.get_pose(env.vehicle_state)[0]
+    def _transform_for_view(self, ctx: cairo.Context, x, y, theta):
         if self.orient_forward:
-            ctx.translate(self.width / 2, self.height * .8)
-            ctx.rotate(-pose[2] - np.pi / 2)
+            ctx.translate(self.width / 2, self.height * self.forward_center)
+            ctx.rotate(-theta - np.pi / 2)
         else:
             ctx.translate(self.width / 2, self.height / 2)
         ctx.scale(self.scale, self.scale)
-        ctx.translate(-pose[0], -pose[1])
+        ctx.translate(-x, -y)
 
-        if isinstance(env.problem, FreeDriveProblem) and self.show_track:
+    def _render_ctx(self, env, ctx):
+        from .Gauge import Gauge
+        from .Colors import BACKGROUND_GRID
+        from .Rendering import stroke_fill
+
+        pose = env.ego_pose
+
+        # Tried to do this with patterns but unbearably slow
+        if self._bg_grid_path is None:
+            s = 1000
+            for t in np.linspace(-s, s, 41):
+                ctx.move_to(-s, t)
+                ctx.line_to(s, t)
+                ctx.move_to(t, -s)
+                ctx.line_to(t, s)
+            self._bg_grid_path = ctx.copy_path_flat()
+            ctx.new_path()
+
+        # Since the background grid doesn't repeat endlessly, snap to nearest origin
+        if self.draw_grid:
+            gx, gy, gtheta = pose
+            self._transform_for_view(ctx, gx % 50, gy % 50, gtheta)
+            ctx.append_path(self._bg_grid_path)
+            stroke_fill(ctx, BACKGROUND_GRID, None)
+
+        ctx.identity_matrix()
+        self._transform_for_view(ctx, *pose)
+
+        if hasattr(env.problem, 'track_dict') and self.show_track:
             self._track_renderer.render(ctx, env.problem.track_dict['centerline'], env.problem.track_dict['width'])
 
         self.render_tire_slip(ctx, env)
 
-        cones = env.objects['cones']
-        types = np.argmax(cones.data[:, 2:], axis=-1) + 1
-
-        self._cone_renderer.render(ctx, cones.data[:, :2], types, cones.radius)
+        if 'cones' in env.objects:
+            cones = env.objects['cones']
+            types = np.argmax(cones.data[:, 2:], axis=-1) + 1
+            self._cone_renderer.render(ctx, cones.data[:, :2], types, cones.radius)
 
         self.render_ghosts(ctx, env)
         draw_vehicle_proxy(ctx, env)
 
-        env.problem.render(ctx, env)
+        if self.draw_hud:
+            env.problem.render(ctx, env)
 
-        if self.draw_physics:
+            if self.draw_sensors:
+                for s in env.sensors.values():
+                    s.draw(ctx, env)
+
+            if self.draw_physics:
+                ctx.identity_matrix()
+                ctx.translate(100, self.height - 100)
+                draw_vehicle_state(ctx, env)
+
             ctx.identity_matrix()
-            ctx.translate(100, self.height - 100)
-            draw_vehicle_state(ctx, env)
+            ctx.translate(self.width - 80, self.height - 80)
+            Gauge(0, 100).draw(ctx, abs(env.vehicle_last_speed) * 3.6)
+            self.render_pedals(ctx, env)
 
-        ctx.identity_matrix()
-        ctx.translate(self.width - 80, self.height - 80)
-        Gauge(0, 100).draw(ctx, abs(env.vehicle_last_speed) * 3.6)
-        self.render_pedals(ctx, env)
+            if self.show_digital_tachometer:
+                self.render_digital_tachometer(ctx, env)
 
-        if self.show_digital_tachometer:
-            self.render_digital_tachometer(ctx, env)
+            env.action.render(ctx, self.width, self.height)
 
-        self.render_start_lights(ctx)
+            self.render_start_lights(ctx)
 
     def render(self, env):
         ctx = self._bvr.clear()
@@ -116,8 +153,8 @@ class BirdViewRenderer:
         if env.vehicle_model.front_slip_ is None:
             return
 
-        front_slip = env.vehicle_model.front_slip_[0]
-        rear_slip = env.vehicle_model.rear_slip_[0]
+        front_slip = env.vehicle_model.front_slip_
+        rear_slip = env.vehicle_model.rear_slip_
 
         h_wb = env.vehicle_model.wheelbase / 2
         h_w = env.collision_bb[-1]

@@ -13,9 +13,10 @@ def main():
     args = parser.parse_args()
 
     cfg = get_standard_env_config(args.env)
-    cfg['action'] = {'type': 'human_pedals'}
+    cfg['action'] = {'type': 'human'} if args.env == 'parking' else {'type': 'human_pedals'}
     cfg['dt'] = 0.05
-    env = CarEnv(cfg)
+    env = CarEnv(cfg, render_mode='human', render_kwargs={'fullscreen': True, 'hints': {'scale': 25.}})
+    env.seed(0)
 
     while True:
         env.reset()
@@ -30,10 +31,10 @@ def main():
             total_reward += rew
             env.render()
 
-            delta = time() - curr_time + env.dt
-
-            if delta > 0:
-                sleep(delta)
+            # Dynamically set the time delta based on actual refresh rate.
+            # This is generally not recommended during serious use but allows
+            # for nicer visuals for this demo.
+            env.dt = time() - curr_time
 
         print(f"{total_reward = }", file=sys.stderr)
 

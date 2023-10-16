@@ -160,16 +160,6 @@ def make_cones_and_start_pose(centerline, width):
     # Find start pos
     forward = centerline[1] - centerline[0]
     forward = forward / np.linalg.norm(forward)
-    full_left = centerline[0] + np.array([-forward[1], forward[0]]) * width / 2
-
-    outer_dist = LinearRing(outer).distance(Point(full_left))
-    inner_dist = LinearRing(inner).distance(Point(full_left))
-
-    # TODO: This appeared broken and not actually required?
-    # if outer_dist > inner_dist:
-    #     theta = np.arctan2(forward[1], forward[0])
-    # else:
-    #     theta = np.arctan2(-forward[1], -forward[0])
 
     theta = np.arctan2(-forward[1], -forward[0])
 
@@ -192,6 +182,13 @@ def make_full_environment(extends=(200, 200), width=5., cone_width=5., rng=None)
             break
         except BadTrackException:
             pass
+
+    # Maybe reverse
+    if rng.integers(0, 2) == 0:
+        centerline = centerline[::-1]
+        theta += np.pi
+        # Map 1 -> 2 and 2 -> 1
+        cone_type = 3 - cone_type
 
     return {
         'centerline': centerline,

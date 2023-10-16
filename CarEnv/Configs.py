@@ -1,6 +1,12 @@
 from copy import deepcopy
 
 
+VEH_CAR_KINEMATIC = {
+    'type': 'bicycle',
+    'wheelbase': 2.4,
+}
+
+
 PARALLEL_PARKING = {
     'action': {'type': 'continuous_steering_accel'},
     'longitudinal': {'type': 'simple'},
@@ -9,10 +15,7 @@ PARALLEL_PARKING = {
     'problem': {'type': 'parallel_parking', 'start': 'after', 'max_time': 15},
     'collision_bb': (-3.81 / 2, 3.81 / 2, -1.48 / 2, 1.48 / 2),
     'dt': .1,
-    'vehicle': {
-        'type': 'bicycle',
-        'wheelbase': 2.4,
-    },
+    'vehicle': VEH_CAR_KINEMATIC,
     'sensors': {
         'cones_set': {
             'type': 'conemap',
@@ -21,27 +24,37 @@ PARALLEL_PARKING = {
     }
 }
 
-VEH_2CV = {
-    'type': 'simple',
+
+VEH_CAR_DYNAMIC = {
+    'type': 'dyn_dugoff',
     'wheelbase': 2.4,
-    'mass': 700.,
+    'mass': 750.,
     'inertia': 812.,  # Approximated by 0.1269*m*R*L according to "Approximation von Trägheitsmomenten bei Personenkraftwagen", Burg, 1982
-    'engine_power': 20 * 1000,
-    'brake_force': 5100.,  #  Difficult, to pass german HU 0.58 * 895 kg * 9.81 N/kg ~= 5100 N
+    'inertia_front': 2.,  # Inertia of front axle
+    'inertia_rear': 2.,   # Inertia of rear axle
+    'engine_power': 60 * 1000,
+    'engine_torque': 1_200.,
+    'brake_torque': 3_000.,
     'brake_balance': .5,
-    'max_grip': 1.2,
+    'mu_front': 1.05,
+    'mu_rear': 1.05,
+    'c_alpha_front': 10.,
+    'c_sigma_front': 10.,
+    'c_alpha_rear': 12.,
+    'c_sigma_rear': 12.,
     'rwd': False,
 }
 
+# Racing with dynamic single track model
 RACING = {
     'action': {'type': 'continuous_steering_pedals'},
     'longitudinal': {'type': 'simple'},
-    'steering': 'direct()',
+    'steering': 'linear(60)',
     'collision_bb': (-3.81 / 2, 3.81 / 2, -1.48 / 2, 1.48 / 2),
-    'vehicle': VEH_2CV,
-    'problem': {'type': 'racing', 'track_width': 8., 'cone_width': 7., 'k_forwards': .01, 'k_base': .0, 'extend': 150, 'time_limit': 60.},
+    'vehicle': VEH_CAR_DYNAMIC,
+    'problem': {'type': 'racing', 'track_width': 8., 'cone_width': 7., 'k_forwards': .1, 'k_base': .0, 'extend': 150, 'time_limit': 60.},
     'dt': .1,
-    'physics_divider': 10,
+    'physics_divider': 20,
     'sensors': {
         'cones_set': {
             'type': 'conemap',
@@ -50,19 +63,10 @@ RACING = {
     }
 }
 
-# Racing duck
-RACING_FAST = deepcopy(RACING)
-RACING_FAST['vehicle']['engine_power'] = 60. * 1000
-RACING_FAST['vehicle']['brake_force'] = 7500.
-RACING_FAST['vehicle']['max_grip'] = .7
-RACING_FAST['vehicle']['max_grip_opt'] = 1.5
-RACING_FAST['sensors']['cones_set']['bbox'] = (-15, 60, -35, 35)  # Also more view range
-RACING_FAST['steering'] = 'linear(60)'
-
 
 _STANDARD_ENVS = {
     'parking': PARALLEL_PARKING,
-    'racing': RACING_FAST,
+    'racing': RACING,
 }
 
 

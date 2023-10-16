@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='CarEnv',
-    version='1.0',
+    version='1.1',
     packages=find_packages(),
     install_requires=[
         'gymnasium~=0.29.1',
@@ -14,6 +14,7 @@ setup(
         'Shapely~=1.8.4'
     ],
     extras_require={
-        'RL': ['rich==13.4.2', 'stable-baselines3==2.1.0', 'tensorboard==2.10.0', 'tqdm==4.64.0', 'wandb==0.13.2'],
+        'RL': ['imageio==2.25.0', 'moviepy==1.0.3', 'rich==13.4.2', 'stable-baselines3==2.1.0', 'tensorboard==2.10.0',
+               'tqdm==4.64.0', 'wandb==0.13.2'],
     },
 )

@@ -2,6 +2,7 @@ import cairo
 import numpy as np
 from typing import Optional
 import os
+from .Colors import BACKGROUND, TIRE, EGO_VEH, BRAKE_LIGHT_LIT, BRAKE_LIGHT_UNLIT, GLASS
 
 
 class BitmapRenderer:
@@ -11,7 +12,7 @@ class BitmapRenderer:
         self.surface: Optional[cairo.ImageSurface] = None
         self.context: Optional[cairo.Context] = None
         self.__result = None
-        self.clear_color = clear_color or (0.8, 0.8, 0.8)
+        self.clear_color = clear_color or BACKGROUND
 
     @property
     def result(self):
@@ -49,25 +50,6 @@ class BitmapRenderer:
         self.close()
 
 
-def draw_test(context: cairo.Context):
-    x, y, x1, y1 = 0.1, 0.5, 0.4, 0.9
-    x2, y2, x3, y3 = 0.6, 0.1, 0.9, 0.5
-    context.save()
-    context.scale(200, 200)
-    context.set_line_width(0.04)
-    context.move_to(x, y)
-    context.curve_to(x1, y1, x2, y2, x3, y3)
-    context.stroke()
-    context.set_source_rgba(1, 0.2, 0.2, 0.6)
-    context.set_line_width(0.02)
-    context.move_to(x, y)
-    context.line_to(x1, y1)
-    context.move_to(x2, y2)
-    context.line_to(x3, y3)
-    context.stroke()
-    context.restore()
-
-
 def stroke_fill(ctx: cairo.Context, stroke_rgb, fill_rgb, line_width=1.0):
     ctx.save()
     ctx.identity_matrix()
@@ -96,16 +78,16 @@ def _draw_car_wheels(ctx: cairo.Context, l, y1, y2, delta):
         ctx.restore()
 
     # Rear wheels
-    draw_rect(-l / 2, y1, .5, .3, 0, (.3, .3, .3))
-    draw_rect(-l / 2, y2, .5, .3, 0, (.3, .3, .3))
+    draw_rect(-l / 2, y1, .5, .3, 0, TIRE)
+    draw_rect(-l / 2, y2, .5, .3, 0, TIRE)
 
     # Front wheels
-    draw_rect(l / 2, y1, .5, .3, delta, (.3, .3, .3))
-    draw_rect(l / 2, y2, .5, .3, delta, (.3, .3, .3))
+    draw_rect(l / 2, y1, .5, .3, delta, TIRE)
+    draw_rect(l / 2, y2, .5, .3, delta, TIRE)
 
 
 def draw_old_car(ctx: cairo.Context, x, y, theta, l, delta, x1, x2, y1, y2, braking=False, color=None):
-    color = color if color is not None else (200 / 255, 211 / 255, 23 / 255)
+    color = color if color is not None else EGO_VEH
 
     ctx.save()
     ctx.translate(x, y)
@@ -181,7 +163,7 @@ def draw_old_car(ctx: cairo.Context, x, y, theta, l, delta, x1, x2, y1, y2, brak
     ctx.line_to(0., y1 * .6)
     ctx.line_to(x2 * .15, y1 * .75)
     ctx.close_path()
-    stroke_fill(ctx, (0., 0., 0.), (.2, .4, .7))
+    stroke_fill(ctx, (0., 0., 0.), GLASS)
 
     # Rear window
     ctx.move_to(x1 * .5, y2 * .6)
@@ -189,58 +171,20 @@ def draw_old_car(ctx: cairo.Context, x, y, theta, l, delta, x1, x2, y1, y2, brak
     ctx.line_to(x1 * .7, y1 * .6)
     ctx.line_to(x1 * .5, y1 * .6)
     ctx.close_path()
-    stroke_fill(ctx, (0., 0., 0.), (.2, .4, .7))
+    stroke_fill(ctx, (0., 0., 0.), GLASS)
 
     # Brake lights
     ctx.rectangle(x1 * .93, y1 * .75, x2 * .08, y2 * .4)
     ctx.rectangle(x1 * .93, y2 * .75, x2 * .08, y1 * .4)
-    brake_color = (.4, 0., 0.) if not braking else (1., .2, .2)
+    brake_color = BRAKE_LIGHT_UNLIT if not braking else BRAKE_LIGHT_LIT
     stroke_fill(ctx, (0., 0., 0.), brake_color)
 
     ctx.restore()
 
 
-def draw_vehicle(ctx: cairo.Context, x, y, theta, l, delta, x1, x2, y1, y2):
-    def draw_rect2(rx1, rx2, ry1, ry2, rot, rgb):
-        ctx.save()
-        ctx.rotate(rot)
-        ctx.rectangle(rx1, ry1, rx2 - rx1, ry2 - ry1)
-        stroke_fill(ctx, (0., 0., 0.), rgb)
-        ctx.restore()
-
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(theta)
-
-    # Body, slightly extend
-    draw_rect2(x1, x2, y1, y2, 0, (200 / 255, 211 / 255, 23 / 255))
-
-    ctx.restore()
-
-
-def draw_bicycle(ctx: cairo.Context, x, y, theta, l, delta):
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(theta)
-    ctx.set_line_width(1.)
-    ctx.move_to(-l / 2, 0)
-    ctx.line_to(l / 2, 0)
-    ctx.stroke()
-    ctx.set_source_rgb(1., 0.2, 0.2)
-    ctx.move_to(-l / 2 - 1, 0)
-    ctx.line_to(-l / 2 + 1, 0)
-    ctx.stroke()
-    ctx.translate(l / 2, 0)
-    ctx.rotate(delta)
-    ctx.move_to(-1, 0)
-    ctx.line_to(1, 0)
-    ctx.stroke()
-    ctx.restore()
-
-
 def draw_vehicle_proxy(ctx, env, pose=None, query_env=True, color=None):
-    pose = pose if pose is not None else env.vehicle_model.get_pose(env.vehicle_state)[0]
-    braking = env.vehicle_model.is_braking[0] if query_env else False
+    pose = pose if pose is not None else env.vehicle_model.get_pose()
+    braking = env.vehicle_model.is_braking if query_env else False
     steering_angle = env.steering_history[-1] if query_env else 0.
 
     draw_old_car(ctx, *pose, env.vehicle_model.wheelbase, steering_angle, *env.collision_bb, braking=braking, color=color)
@@ -260,13 +204,13 @@ def draw_vehicle_state(ctx: cairo.Context, env):
     ctx.save()
     ctx.translate(50, 0)
     ctx.move_to(0., 0.)
-    ctx.line_to(*(env.vehicle_model.v_front_[0]) * 4.)
+    ctx.line_to(*(env.vehicle_model.v_front_) * 4.)
     stroke_fill(ctx, (1., 0., 0.), None, 3.)
     ctx.restore()
     ctx.save()
     ctx.translate(-50, 0)
     ctx.move_to(0., 0.)
-    ctx.line_to(*(env.vehicle_model.v_rear_[0]) * 4.)
+    ctx.line_to(*(env.vehicle_model.v_rear_) * 4.)
     stroke_fill(ctx, (1., 0., 0.), None, 3.)
     ctx.restore()
 
@@ -274,18 +218,18 @@ def draw_vehicle_state(ctx: cairo.Context, env):
     ctx.save()
     ctx.translate(50, 0)
     ctx.move_to(0., 0.)
-    ctx.line_to(*(env.vehicle_model.force_front_[0] * .01))
+    ctx.line_to(*(env.vehicle_model.force_front_ * .01))
     stroke_fill(ctx, (0., 0., 1.), None, 3.)
-    if env.vehicle_model.front_slip_[0]:
+    if env.vehicle_model.front_slip_:
         ctx.arc(0., 0., env.vehicle_model.peak_traction * .01, 0., np.pi * 2)
         stroke_fill(ctx, (0., 0., 1.), None, 3.)
     ctx.restore()
     ctx.save()
     ctx.translate(-50, 0)
     ctx.move_to(0., 0.)
-    ctx.line_to(*(env.vehicle_model.force_rear_[0] * .01))
+    ctx.line_to(*(env.vehicle_model.force_rear_ * .01))
     stroke_fill(ctx, (0., 0., 1.), None, 3.)
-    if env.vehicle_model.rear_slip_[0]:
+    if env.vehicle_model.rear_slip_:
         ctx.arc(0., 0., env.vehicle_model.peak_traction * .01, 0., np.pi * 2)
         stroke_fill(ctx, (0., 0., 1.), None, 3.)
     ctx.restore()

@@ -4,10 +4,9 @@ Easy to use `gym`-Environment for 2D vehicle simulations using dynamic scenes.
 
 ## Racing scenario
 
-Navigating a tightly winding road with slippery surface. Vehicle uses a dynamic single track model with
-front wheel drive.
-Throttle, brake and steering are continuous actions. The agent may learn to control brake
-balance by applying throttle and brake individually.
+Navigating a randomly generated tightly winding road at speed. The simulated vehicle uses a dynamic single track model with a coupled Dugoff tire model.
+Throttle, brake and steering are continuous actions, with the vehicle by default using front wheel drive.
+The agent may learn to control brake balance by applying throttle and brake individually.
 
 ![Video of agent on country road environment](Docs/CountryRoadShort.gif)
 

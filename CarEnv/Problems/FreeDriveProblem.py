@@ -80,7 +80,7 @@ class FreeDriveProblem(Problem):
 
         forward_v = self.calculate_forward_vel_coeff(env)
         env.metrics['forward_velocity'] = forward_v
-        env.add_to_reward(forward_v * self.k_forwards)
+        env.add_to_reward(forward_v * dt * self.k_forwards)
 
         pose_xy = env.ego_pose[:2]
         # print(f"{pose_xy = }")
