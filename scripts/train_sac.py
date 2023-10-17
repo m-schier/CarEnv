@@ -150,13 +150,12 @@ class EvalCallback(BaseCallback):
         if self.num_timesteps % self.freq != 0:
             return True
 
-        self.env.seed(0)
         episode_rewards = []
         episode_steps = []
         bitmaps = []
 
         for i in range(self.tries):
-            obs, _ = self.env.reset()
+            obs, _ = self.env.reset(seed=i)
             if i == 0:
                 bitmaps.append(self.env.render())
             done = False

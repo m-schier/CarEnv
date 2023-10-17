@@ -16,10 +16,9 @@ def main():
     cfg['action'] = {'type': 'human'} if args.env == 'parking' else {'type': 'human_pedals'}
     cfg['dt'] = 0.05
     env = CarEnv(cfg, render_mode='human', render_kwargs={'fullscreen': True, 'hints': {'scale': 25.}})
-    env.seed(0)
+    env.reset(seed=0)
 
     while True:
-        env.reset()
         done = False
         total_reward = 0
 
@@ -29,7 +28,6 @@ def main():
             obs, rew, terminated, truncated, *_ = env.step(act)
             done = terminated or truncated
             total_reward += rew
-            env.render()
 
             # Dynamically set the time delta based on actual refresh rate.
             # This is generally not recommended during serious use but allows
@@ -37,6 +35,7 @@ def main():
             env.dt = time() - curr_time
 
         print(f"{total_reward = }", file=sys.stderr)
+        env.reset()
 
 
 if __name__ == '__main__':

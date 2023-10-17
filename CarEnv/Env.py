@@ -80,7 +80,7 @@ class CarEnv(gym.Env):
     def __init__(self, config=None, render_mode=None, render_kwargs=None):
         super(CarEnv, self).__init__()
 
-        self._rng = np.random.default_rng()
+        self._np_random = np.random.default_rng()
         self._config = deepcopy(config) if config is not None else {}
         self._action = self._make_action()
         self.action_space = self._action.action_space
@@ -153,7 +153,7 @@ class CarEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict(obs_space)
 
-    def render(self):
+    def _render_impl(self):
         if self.render_mode in ['human', 'rgb_array']:
             rgb_array = self.__renderer.render(self)
 
@@ -174,12 +174,12 @@ class CarEnv(gym.Env):
         else:
             raise ValueError(f"{self.render_mode = }")
 
-    def seed(self, seed=None):
-        if seed is not None:
-            self._rng = np.random.default_rng(seed=seed)
-
-        # This should return the current seed in any case, but we can't retrieve a seed from numpy's default_rng
-        return [seed]
+    def render(self):
+        if self.render_mode == 'human':
+            # Do nothing if we are already rendering in human mode in reset() and step()
+            return
+        else:
+            return self._render_impl()
 
     def add_to_reward(self, val):
         self._pending_reward += val
@@ -223,6 +223,10 @@ class CarEnv(gym.Env):
 
         self._reset_required = terminated or truncated
         self._pending_info['TimeLimit.truncated'] = truncated
+
+        # gymnasium-API calls to always render if render_mode set to human
+        if self.render_mode == 'human':
+            self._render_impl()
 
         return obs, self._pending_reward, terminated, truncated, self._pending_info
 
@@ -293,7 +297,9 @@ class CarEnv(gym.Env):
 
         return self.sensors
 
-    def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None) -> Tuple[Any, dict]:
+    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[Any, dict]:
+        super(CarEnv, self).reset(seed=seed)
+
         if self.__renderer is not None:
             self.__renderer.reset()
 
@@ -314,7 +320,7 @@ class CarEnv(gym.Env):
         self.metrics = {}
         self.objects = {}
 
-        pose = self.problem.configure_env(self, rng=self._rng)
+        pose = self.problem.configure_env(self, rng=self._np_random)
 
         self._make_sensors()
 
@@ -327,5 +333,9 @@ class CarEnv(gym.Env):
         self.traveled_distance = 0.
 
         self.steering_history = np.zeros(self.steering_history_length)
+
+        # gymnasium-API calls to always render if render_mode set to human
+        if self.render_mode == 'human':
+            self._render_impl()
 
         return self._make_obs(), {}
