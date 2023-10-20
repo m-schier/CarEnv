@@ -76,3 +76,24 @@ def get_standard_env_config(name):
 
 def get_standard_env_names():
     return list(_STANDARD_ENVS.keys())
+
+
+# Gym Registry
+_REGISTRY = {
+    'CarEnv-Racing-v1': {'config': get_standard_env_config('racing')},
+    'CarEnv-Parking-v1': {'config': get_standard_env_config('parking')},
+}
+
+
+def _register():
+    import gymnasium
+
+    for k, v in _REGISTRY.items():
+        gymnasium.register(k, 'CarEnv.Env:CarEnv', kwargs=v)
+
+
+_register()
+
+
+def get_registered():
+    return list(_REGISTRY.keys())

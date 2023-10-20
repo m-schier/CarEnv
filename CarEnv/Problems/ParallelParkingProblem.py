@@ -50,7 +50,7 @@ class ParallelParkingProblem(Problem):
             # TODO: Better normalization
             env.vehicle_last_speed / 10.,
             env.steering_history[-1],
-        ])
+        ], dtype=np.float32)
 
     def _make_problem(self, env, rng=None):
         gap_start = rng.integers(5, 10) * 2

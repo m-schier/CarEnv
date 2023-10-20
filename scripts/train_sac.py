@@ -173,7 +173,8 @@ class EvalCallback(BaseCallback):
             episode_steps.append(step)
 
         bitmaps = np.transpose(np.stack(bitmaps), (0, 3, 1, 2))
-        fps = int(np.ceil(1 / self.env.dt))
+        dt = self.env.unwrapped.dt if isinstance(self.env, gym.Wrapper) else self.env.dt
+        fps = int(np.ceil(1 / dt))
         wandb.log({"eval/video": wandb.Video(bitmaps, fps=fps)}, step=self.num_timesteps)
         self.logger.record("eval/ep_rew_mean", np.mean(episode_rewards))
         self.logger.record("eval/ep_len_mean", np.mean(episode_steps))
@@ -187,20 +188,18 @@ def main():
     from stable_baselines3.common.callbacks import ProgressBarCallback
     from stable_baselines3.common.logger import configure
     from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
-    from CarEnv.Configs import get_standard_env_config, get_standard_env_names
-    from CarEnv.Env import CarEnv
+    from CarEnv import get_registered
 
     parser = ArgumentParser()
     parser.add_argument('--gamma', type=float, default=.97)
     parser.add_argument('--static_dims', default=0, type=int)
     parser.add_argument('--timesteps', type=int, default=1_000_000)
     parser.add_argument('--buffer_size', type=int, default=200_000)
-    parser.add_argument('--env', choices=get_standard_env_names(), default='racing')
+    parser.add_argument('--env', choices=get_registered(), default=get_registered()[0])
     args = parser.parse_args()
 
-    env_config = get_standard_env_config(args.env)
-    env = CarEnv(env_config)
-    eval_env = CarEnv(env_config, render_mode='rgb_array')
+    env = gym.make(args.env)
+    eval_env = gym.make(args.env, render_mode='rgb_array')
 
     os.makedirs('./tmp', exist_ok=True)
     wandb.init(project="CarEnv", resume='never', config=args, sync_tensorboard=True, dir='./tmp')

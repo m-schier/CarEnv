@@ -58,7 +58,7 @@ class SensorConeMap(Sensor):
             import warnings
             warnings.warn(f"Discarding {count - enc_count} objects because {self._max_objects = } is too low.")
 
-        result = np.zeros((self._max_objects, cones.data.shape[1] + 1))
+        result = np.zeros((self._max_objects, cones.data.shape[1] + 1), dtype=np.float32)
         result[:enc_count, 0] = 1
         result[:enc_count, 1:3] = vis_pos[:enc_count]
         result[:enc_count, 3:] = BatchedCones.categorical_from_indices(cone_types_idx[:enc_count])

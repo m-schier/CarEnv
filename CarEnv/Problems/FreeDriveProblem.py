@@ -38,7 +38,7 @@ class FreeDriveProblem(Problem):
             # TODO: Normalize and not actually required
             env.vehicle_last_speed,
             env.steering_history[-1],
-        ])
+        ], dtype=np.float32)
 
     def configure_env(self, env, rng=None) -> Tuple[float, float, float]:
         self.track_dict = make_full_environment(width=self.track_width, extends=(self.extend, self.extend),

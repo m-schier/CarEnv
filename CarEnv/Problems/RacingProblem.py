@@ -31,6 +31,6 @@ class RacingProblem(FreeDriveProblem):
             beta / env.vehicle_model.steering_model.beta_max,
             omega_front,
             omega_rear,
-        ])
+        ], dtype=np.float32)
 
         return result
