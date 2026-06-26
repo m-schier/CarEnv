@@ -149,7 +149,7 @@ def check_valid_track(centerline, width):
     return True
 
 
-def make_cones_and_start_pose(centerline, width):
+def make_cones_and_start_pose(centerline, width, detect_left_right=False):
     from .Util import discretize2
 
     poly = make_polygon_from_centerline(centerline, width)
@@ -168,8 +168,18 @@ def make_cones_and_start_pose(centerline, width):
     forward = forward / np.linalg.norm(forward)
 
     theta = np.arctan2(-forward[1], -forward[0])
-
     xy = centerline[0]
+
+    # Not required for our standard generator so better not touch anything, but this may be useful for custom tracks
+    if detect_left_right:
+        left = np.array([-forward[1], forward[0]])
+        # A point which should be close to the left boundary
+        pt = Point(xy + width * left)
+
+        if pt.distance(poly.exterior) > pt.distance(poly.interiors[0]):
+            # Must flip cone types
+            # Map 1 -> 2 and 2 -> 1
+            cone_type = 3 - cone_type
 
     return cone_pos, cone_type, xy, theta
 

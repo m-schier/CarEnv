@@ -36,17 +36,19 @@ class DirLookup:
         return self._dirs[idx]
 
 
+def generate_standard_track(rng, track_width=6., cone_width=5., extend=100.):
+    return make_full_environment(width=track_width, extends=(extend, extend), cone_width=cone_width, rng=rng)
+
+
 class FreeDriveProblem(Problem):
     def __init__(self, env, track_width=6., cone_width=5., k_center=0., k_base=.05, k_forwards=0., extend=100.,
                  lap_limit=None, time_limit=None, soft_collisions=False, truncate_idle=True, place_cones=True):
+        from functools import partial
         super(FreeDriveProblem, self).__init__(env)
 
         if lap_limit is None and time_limit is None:
             raise ValueError("At least one of lap_limit and time_limit must be set")
 
-        self.track_width = track_width
-        self.cone_width = cone_width
-        self.extend = extend
         self.k_center = k_center
         self.k_forwards = k_forwards
         self.k_base = k_base
@@ -61,6 +63,7 @@ class FreeDriveProblem(Problem):
         self.old_projection = None
         self.idle_time = 0.
         self.track_progress = 0.
+        self.generate_track = partial(generate_standard_track, track_width=track_width, cone_width=cone_width, extend=extend)
         self._dir_lookup = None
         self._track_renderer = None
 
@@ -85,8 +88,7 @@ class FreeDriveProblem(Problem):
         self._track_renderer = None
 
         # Configure new state
-        self.track_dict = make_full_environment(width=self.track_width, extends=(self.extend, self.extend),
-                                                cone_width=self.cone_width, rng=rng)
+        self.track_dict = self.generate_track(rng)
         self.lr = LinearRing(self.track_dict['centerline'])
         # Add outline to track
         self.track_dict['poly'] = shapely_safe_buffer(self.lr, self.track_dict['width'] / 2 + .3)
@@ -163,7 +165,7 @@ class FreeDriveProblem(Problem):
         terminated = False
         truncated = False
 
-        if distance_from_center > self.track_width / 2:
+        if distance_from_center > self.track_dict['width'] / 2:
             env.set_reward(-1)
             env.add_info('Done.Reason', 'LeftTrack')
             terminated = True

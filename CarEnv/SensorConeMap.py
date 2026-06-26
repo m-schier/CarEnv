@@ -16,19 +16,20 @@ class SensorConeMap(Sensor):
         self._bbox = bbox
         self.limit_type = limit_type
         self.sort = sort
+        self.imperfection_misclassify_chance = 0.
 
-        if noise_profile is None:
+        if isinstance(noise_profile, float):
+            self.imperfection_miss_chance = noise_profile * .1
+            self.imperfection_position_error_scale = noise_profile / 30.
+        elif noise_profile is None:
             self.imperfection_miss_chance = 0.
             self.imperfection_position_error_scale = 0.
-            self.imperfection_misclassify_chance = 0.
         elif noise_profile == 'low':
             self.imperfection_miss_chance = 0.05
             self.imperfection_position_error_scale = 0.5 / 30.
-            self.imperfection_misclassify_chance = 0.
         elif noise_profile == 'high':
             self.imperfection_miss_chance = 0.15
             self.imperfection_position_error_scale = 1.5 / 30.
-            self.imperfection_misclassify_chance = 0.
         else:
             raise ValueError(f"{noise_profile = }")
 
